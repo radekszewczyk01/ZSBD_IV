@@ -1,0 +1,60 @@
+// 1. USTALAMY TRASĘ WZORCOWĄ (Z GDS)
+WITH "08:45:00" AS user_time,
+     "Wagonownia" AS start_name,
+     "Główna" AS end_name
+
+MATCH (start:Stop), (end:Stop)
+WHERE start.stop_name CONTAINS start_name AND end.stop_name = end_name
+
+CALL gds.shortestPath.astar.stream('graf_miejski', {
+    sourceNode: start,
+    targetNode: end,
+    latitudeProperty: 'stop_lat',
+    longitudeProperty: 'stop_lon',
+    relationshipWeightProperty: 'avg_time'
+})
+YIELD nodeIds
+WITH [nodeId IN nodeIds | gds.util.asNode(nodeId)] AS planned_path, user_time
+
+// 2. POBIERAMY KANDYDATÓW
+WITH planned_path, planned_path[0] AS current_stop, user_time
+
+MATCH (trip:Trip)-[r_start:STOPS_AT]->(current_stop)
+WHERE r_start.departure_time >= user_time  // <-- Zmieniłem na departure_time (logiczniej patrzeć na odjazd)
+  AND EXISTS { (trip)-[:VALID_ON]->(c:Calendar) WHERE c.monday = TRUE }
+
+// 3. POBIERAMY DALSZĄ TRASĘ I SORTUJEMY
+MATCH (trip)-[r_next:STOPS_AT]->(next_stop:Stop)
+WHERE r_next.stop_sequence >= r_start.stop_sequence
+
+// Ważne: Musimy przekazać r_start dalej, żeby nie zgubić czasu odjazdu
+WITH planned_path, trip, r_start, next_stop, r_next 
+ORDER BY r_next.stop_sequence ASC
+
+// Zwijamy trasę, ale trzymamy r_start w grupowaniu
+WITH planned_path, trip, r_start, collect(next_stop) AS actual_bus_path, collect(r_next) AS actual_times
+
+// 4. ALGORYTM PORÓWNYWANIA
+WITH planned_path, trip, r_start, actual_bus_path, actual_times,
+     reduce(acc = 0, i IN range(0, size(planned_path)-1) |
+        CASE 
+            WHEN i < size(actual_bus_path) 
+             AND i = acc 
+             AND planned_path[i] = actual_bus_path[i] 
+            THEN acc + 1
+            ELSE acc
+        END
+     ) AS match_count
+
+WHERE match_count > 1
+
+// 5. WYNIK
+RETURN 
+    trip.trip_headsign AS Linia,
+    r_start.departure_time AS Czas_Odjazdu,    // <--- DODANE
+    match_count AS Ile_Przystankow_Zgodnych,
+    actual_bus_path[match_count-1].stop_name AS Wysiadka_Na,
+    actual_times[match_count-1].arrival_time AS Czas_Przyjazdu_Na_Przesiadke,
+    [n IN actual_bus_path[0..match_count] | n.stop_name] AS Wspolna_Trasa
+ORDER BY match_count DESC, Czas_Odjazdu ASC
+LIMIT 10;

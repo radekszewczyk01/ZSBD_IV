@@ -11,8 +11,10 @@ RETURN
   trip.trip_headsign,
   dest.stop_name,
   r_dest.arrival_time,
-  r_dest.stop_sequence
+  r_dest.stop_sequence,
+  r_start.arrival_time AS start_time
 ORDER BY 
-  trip.trip_id ASC,
-  r_dest.stop_sequence ASC
+  r_start.arrival_time ASC,   // <--- 1. Najważniejsze: Sortuj od najwcześniejszego odjazdu z Wagonowni
+  trip.trip_id ASC,           // 2. Grupuj wiersze tego samego autobusu (dla porządku)
+  r_dest.stop_sequence ASC    // 3. Układaj przystanki po kolei w ramach trasy
 LIMIT 50;
