@@ -1,0 +1,21 @@
+MATCH (trip:Trip)
+CALL {
+    WITH trip
+    MATCH (s1:Stop)<-[t1:STOPS_AT]-(trip)-[t2:STOPS_AT]->(s2:Stop)
+    WHERE t2.stop_sequence = t1.stop_sequence + 1
+    WITH s1, s2, 
+         split(t1.departure_time, ":") AS d, 
+         split(t2.arrival_time, ":") AS a
+    WITH s1, s2,
+         (toInteger(d[0]) * 3600 + toInteger(d[1]) * 60 + toInteger(d[2])) AS start_sec,
+         (toInteger(a[0]) * 3600 + toInteger(a[1]) * 60 + toInteger(a[2])) AS end_sec
+    WITH s1, s2, (end_sec - start_sec) / 60.0 AS czas_przejazdu
+    WHERE czas_przejazdu >= 0 
+    MERGE (s1)-[r:CONNECTED_TO]->(s2)
+    ON CREATE SET 
+        r.avg_time = czas_przejazdu, 
+        r.count = 1
+    ON MATCH SET 
+        r.avg_time = (r.avg_time * r.count + czas_przejazdu) / (r.count + 1),
+        r.count = r.count + 1
+} IN TRANSACTIONS OF 500 ROWS;

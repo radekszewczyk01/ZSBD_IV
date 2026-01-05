@@ -1,0 +1,18 @@
+MATCH (start:Stop)
+WHERE start.stop_name CONTAINS "Wagonownia"
+MATCH (trip:Trip)-[r_start:STOPS_AT]->(start)
+MATCH (trip)-[:VALID_ON]->(c:Calendar)
+WHERE c.monday = TRUE 
+  AND r_start.arrival_time >= "08:45:00"
+MATCH (trip)-[r_dest:STOPS_AT]->(dest:Stop)
+WHERE r_dest.stop_sequence >= r_start.stop_sequence
+RETURN 
+  trip.trip_id,
+  trip.trip_headsign,
+  dest.stop_name,
+  r_dest.arrival_time,
+  r_dest.stop_sequence
+ORDER BY 
+  trip.trip_id ASC,
+  r_dest.stop_sequence ASC
+LIMIT 50;

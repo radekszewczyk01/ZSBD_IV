@@ -1,0 +1,125 @@
+CALL gds.graph.project(
+    'graf_miejski',
+    'Stop',
+    'CONNECTED_TO',
+    {
+        nodeProperties: ['stop_lat', 'stop_lon'],
+        relationshipProperties: 'avg_time'
+    }
+)
+
+
+
+// ==========================================
+// 1. Ustawienia i Trasa A*
+// ==========================================
+WITH "08:00:00" AS start_time, 
+     "Wagonownia" AS start_stop_name, 
+     "Główna" AS end_stop_name
+
+MATCH (start:Stop), (end:Stop)
+WHERE start.stop_name CONTAINS start_stop_name AND end.stop_name = end_stop_name
+
+CALL gds.shortestPath.astar.stream('graf_miejski', {
+    sourceNode: start,
+    targetNode: end,
+    latitudeProperty: 'stop_lat',
+    longitudeProperty: 'stop_lon',
+    relationshipWeightProperty: 'avg_time'
+})
+YIELD nodeIds
+WITH [nodeId IN nodeIds | gds.util.asNode(nodeId)] AS path_nodes, start_time
+
+// ==========================================
+// 2. Pobieranie rozkładów (Przygotowanie danych)
+// ==========================================
+UNWIND range(0, size(path_nodes)-2) AS i
+WITH i, path_nodes[i] AS s1, path_nodes[i+1] AS s2, start_time, path_nodes
+
+// Pobieramy dostępne kursy dla odcinka
+MATCH (s1)<-[t1:STOPS_AT]-(trip:Trip)-[t2:STOPS_AT]->(s2)
+WHERE t2.stop_sequence > t1.stop_sequence
+  AND EXISTS { (trip)-[:VALID_ON]->(c:Calendar) WHERE c.monday = TRUE }
+  AND t1.departure_time >= start_time 
+
+WITH i, s1, s2, trip, t1, t2, start_time
+ORDER BY t1.departure_time ASC
+
+// --- TU BYŁ BŁĄD: Musimy przekazać 'start_time' dalej ---
+WITH i, start_time, collect({
+    trip_id: trip.trip_id,
+    line: trip.trip_headsign,
+    start: s1.stop_name,
+    end: s2.stop_name,
+    dep: t1.departure_time,
+    arr: t2.arrival_time
+}) AS segment_options
+ORDER BY i ASC
+
+// Teraz 'start_time' jest już dostępny
+WITH collect(segment_options) AS all_segments_schedule, start_time
+
+// ==========================================
+// 3. Symulacja (REDUCE)
+// ==========================================
+WITH reduce(acc = {
+    now: start_time, 
+    legs: [], 
+    last_trip: "brak"
+}, segment_options IN all_segments_schedule |
+    
+    head([ best_leg IN [head([opt IN segment_options WHERE opt.dep >= acc.now])] |
+        CASE
+            WHEN best_leg IS NULL THEN acc
+
+            // PRZYPADEK 1: Kontynuacja tym samym autobusem
+            WHEN acc.last_trip = best_leg.trip_id THEN
+                {
+                    now: best_leg.arr,
+                    last_trip: best_leg.trip_id,
+                    legs: acc.legs[0..-1] + [
+                        {
+                            Linia: acc.legs[-1].Linia,
+                            Wsiadasz: acc.legs[-1].Wsiadasz,
+                            Odjazd: acc.legs[-1].Odjazd,
+                            Wysiadasz: best_leg.end, 
+                            Przyjazd: best_leg.arr
+                        }
+                    ]
+                }
+
+            // PRZYPADEK 2: Przesiadka
+            ELSE
+                {
+                    now: best_leg.arr,
+                    last_trip: best_leg.trip_id,
+                    legs: acc.legs + [{
+                        Linia: best_leg.line,
+                        Wsiadasz: best_leg.start,
+                        Odjazd: best_leg.dep,
+                        Wysiadasz: best_leg.end,
+                        Przyjazd: best_leg.arr
+                    }]
+                }
+        END
+    ])
+) AS final_result
+
+// ==========================================
+// 4. Wyświetlanie
+// ==========================================
+UNWIND final_result.legs AS etap
+RETURN 
+    etap.Linia,
+    etap.Wsiadasz,
+    etap.Odjazd,
+    etap.Wysiadasz,
+    etap.Przyjazd
+ORDER BY etap.Odjazd ASC
+
+
+
+
+
+CALL gds.graph.drop('graf_miejski', false)
+
