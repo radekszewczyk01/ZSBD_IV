@@ -1,0 +1,20 @@
+MATCH (s:Stop)
+WHERE s.stop_name = 'Wagonownia'
+// Tworzymy punkt dla przystanku
+WITH point({latitude: toFloat(s.stop_lat), longitude: toFloat(s.stop_lon)}) AS stopPoint
+
+MATCH (j:Jadlodalnia)
+// Upewniamy się, że jadłodajnia ma koordynaty
+WHERE j.`@lat` IS NOT NULL AND j.`@lon` IS NOT NULL 
+
+// Tworzymy punkt dla jadłodajni - ZAUWAŻ GRAWISY przy @lat i @lon
+WITH j, stopPoint, point({latitude: toFloat(j.`@lat`), longitude: toFloat(j.`@lon`)}) AS jPoint
+
+// Liczymy dystans (mniej niż 1000 metrów)
+WHERE point.distance(stopPoint, jPoint) < 1000
+
+RETURN 
+    j.name AS Nazwa,
+    j.cuisine AS Kuchnia,
+    toInteger(point.distance(stopPoint, jPoint)) AS Metrow_od_przystanku
+ORDER BY Metrow_od_przystanku ASC

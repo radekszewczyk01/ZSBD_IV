@@ -1,0 +1,7 @@
+
+MATCH path = (s1:Stop)-[r:CONNECTED_TO]->(s2:Stop)
+// Filtrujemy, żeby nie zamulić mapy całą Warszawą
+WITH path, s1, point({latitude: 52.2319, longitude: 21.0067}) AS centrum
+WHERE point.distance(point({latitude: s1.latitude, longitude: s1.longitude}), centrum) < 1000
+RETURN path
+

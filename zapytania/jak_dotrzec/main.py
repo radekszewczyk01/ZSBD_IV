@@ -33,8 +33,8 @@ QUERY_GET_IDEAL_PATH = """
     CALL gds.shortestPath.astar.stream('graf_miejski', {
         sourceNode: start,
         targetNode: end,
-        latitudeProperty: 'stop_lat',
-        longitudeProperty: 'stop_lon',
+        latitudeProperty: 'latitude',
+        longitudeProperty: 'longitude',
         relationshipWeightProperty: 'avg_time'
     })
     YIELD nodeIds, totalCost

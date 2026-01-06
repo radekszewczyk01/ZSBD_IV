@@ -1,0 +1,3 @@
+MATCH (n:Jadlodalnia)
+WHERE n.name IS NULL
+DETACH DELETE n

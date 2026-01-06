@@ -1,0 +1,10 @@
+MATCH (j:Jadlodalnia)
+WHERE j.`@lat` IS NOT NULL
+SET j.latitude = toFloat(j.`@lat`),
+    j.longitude = toFloat(j.`@lon`)
+RETURN count(j) as Przeliczono
+
+MATCH (s:Stop)
+SET s.latitude = toFloat(s.stop_lat),
+    s.longitude = toFloat(s.stop_lon)
+RETURN count(s) as Zaktualizowane_Przystanki

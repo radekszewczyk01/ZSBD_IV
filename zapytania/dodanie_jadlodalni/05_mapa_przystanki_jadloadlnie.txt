@@ -1,0 +1,15 @@
+// Część 1: Jadłodajnie
+MATCH (j:Jadlodalnia)
+WITH j, point({latitude: 52.2319, longitude: 21.0067}) AS centrum
+WHERE j.latitude IS NOT NULL 
+  AND point.distance(point({latitude: j.latitude, longitude: j.longitude}), centrum) < 500
+RETURN j AS punkt
+
+UNION
+
+// Część 2: Przystanki
+MATCH (s:Stop)
+WITH s, point({latitude: 52.2319, longitude: 21.0067}) AS centrum
+WHERE s.latitude IS NOT NULL 
+  AND point.distance(point({latitude: s.latitude, longitude: s.longitude}), centrum) < 500
+RETURN s AS punkt
