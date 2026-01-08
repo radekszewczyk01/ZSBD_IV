@@ -1,0 +1,26 @@
+MATCH (start:Stop)
+WHERE start.stop_name CONTAINS "Smoluchowskiego" 
+  AND (start.stop_code = 3 OR start.stop_code = "03") // Obsługa numeru jako liczby lub tekstu
+
+MATCH (dest:Stop)
+WHERE dest.stop_name CONTAINS "Metro Wilanowska" 
+  AND (dest.stop_code = 11 OR dest.stop_code = "11")
+
+MATCH (start)<-[r_start:STOPS_AT]-(trip:Trip)-[r_dest:STOPS_AT]->(dest)
+WHERE r_dest.stop_sequence > r_start.stop_sequence // Cel musi być PO starcie
+
+// Opcjonalnie: pobranie informacji o dniach kursowania
+MATCH (trip)-[:VALID_ON]->(c:Calendar)
+
+RETURN DISTINCT
+  start.stop_name AS Start,
+  start.stop_code AS Kod_Start,
+  dest.stop_name AS Cel,
+  dest.stop_code AS Kod_Cel,
+  trip.trip_headsign AS Kierunek,
+  r_start.arrival_time AS Godzina_Odjazdu,
+  r_dest.arrival_time AS Godzina_Przyjazdu,
+  // Sprawdzamy, w jakie dni kursuje ten przejazd
+  [day in ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'] WHERE c[day] = true] AS Dni_Kursowania
+ORDER BY Godzina_Odjazdu ASC
+LIMIT 50;

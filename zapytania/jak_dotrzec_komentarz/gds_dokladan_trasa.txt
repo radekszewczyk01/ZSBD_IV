@@ -1,0 +1,19 @@
+MATCH (start:Stop), (end:Stop)
+WHERE start.stop_name CONTAINS "Wagonownia" 
+  AND end.stop_name = "Główna"
+
+CALL gds.shortestPath.astar.stream('graf_miejski', {
+    sourceNode: start,
+    targetNode: end,
+    latitudeProperty: 'stop_lat',
+    longitudeProperty: 'stop_lon',
+    relationshipWeightProperty: 'avg_time'
+})
+YIELD index, sourceNode, targetNode, totalCost, nodeIds, costs, path
+
+RETURN 
+    totalCost AS Czas_Minuty,
+    [nodeId IN nodeIds | {
+        nazwa: gds.util.asNode(nodeId).stop_name, 
+        kod: gds.util.asNode(nodeId).stop_code 
+    }] AS Trasa

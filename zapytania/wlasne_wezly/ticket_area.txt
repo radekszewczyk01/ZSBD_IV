@@ -1,0 +1,15 @@
+MATCH (s:Stop)
+// 1. Definiujemy punkt centralny (przesunięty na południe, jak chciałeś)
+WITH s, point({latitude: 52.1800, longitude: 21.0067}) AS centrum
+// 2. Filtrujemy przystanki oddalone o >= 10km
+WHERE s.latitude IS NOT NULL 
+  AND point.distance(point({latitude: s.latitude, longitude: s.longitude}), centrum) >= 10000
+
+// 3. Tworzymy (lub znajdujemy, jeśli istnieje) węzeł Strefy Biletowej
+MERGE (zone:TicketArea {number: 2})
+
+// 4. Tworzymy relację CONTAINS między strefą a znalezionymi przystankami
+MERGE (zone)-[:CONTAINS]->(s)
+
+// 5. Zwracamy wynik, abyś widział, ile przystanków przypisano
+RETURN zone.number AS strefa, count(s) AS liczba_przystankow
