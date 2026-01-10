@@ -1,0 +1,24 @@
+MATCH (t:Trip)
+CALL {
+    WITH t
+    MATCH (t)-[r:STOPS_AT]->(s:Stop)
+    WITH t, s, r 
+    ORDER BY r.stop_sequence ASC
+    
+    WITH t, collect({node: s, rel: r}) AS stops
+    UNWIND range(0, size(stops)-2) AS i
+    
+    WITH t, stops[i] AS startStruct, stops[i+1] AS endStruct
+    
+    // POPRAWKA: Wyciągamy węzły i relacje do prostych zmiennych PRZED użyciem w CREATE
+    WITH t, 
+         startStruct.node AS startNode, 
+         endStruct.node AS endNode,
+         startStruct.rel AS startRel, 
+         endStruct.rel AS endRel
+
+    CREATE (startNode)-[d:DRIVE]->(endNode)
+    SET d.trip_id = t.trip_id,
+        d.dep_time = startRel.departure_time,
+        d.arr_time = endRel.arrival_time
+} IN TRANSACTIONS OF 100 ROWS;
