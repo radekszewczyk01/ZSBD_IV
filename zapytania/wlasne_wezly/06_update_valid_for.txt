@@ -1,0 +1,6 @@
+MATCH (t:Ticket {ticket_id: "t_12345"})
+MATCH (newArea:TicketArea {number: 2})
+OPTIONAL MATCH (t)-[oldRel:VALID_FOR]->(:TicketArea {number: 1})
+DELETE oldRel
+CREATE (t)-[:VALID_FOR]->(newArea)
+RETURN t, newArea

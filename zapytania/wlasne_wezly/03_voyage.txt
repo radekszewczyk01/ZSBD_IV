@@ -1,0 +1,18 @@
+MATCH (g:Guest {guest_id: "jan_kowalski"})
+MATCH (trip:Trip {trip_id: "0_3_2673826"})
+
+// Tworzymy obiekt podróży
+CREATE (voyage:GuestVoyage {
+    voyage_id: "voyage_jan_001",
+    start_sequence: 10,
+    end_sequence: 14
+})
+
+// Łączymy Pasażera z Podróżą
+CREATE (g)-[:TRAVELED]->(voyage)
+
+// Łączymy Podróż z Tripem (żeby wiedzieć, który to był autobus)
+// Używam relacji USES_TRIP, żeby było semantycznie jasne
+CREATE (voyage)-[:USES_TRIP]->(trip)
+
+RETURN g, voyage, trip

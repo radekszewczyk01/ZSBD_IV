@@ -1,0 +1,15 @@
+MATCH (g:Guest {name: "Jan Kowalski"})-[:TRAVELED]->(gv:GuestVoyage)
+MATCH (gv)-[:USES_TRIP]->(t:Trip)
+MATCH (t)-[:VALID_ON]->(c:Calendar)
+MATCH (t)-[sa:STOPS_AT]->(s:Stop)
+// Dodajemy relację łączącą Strefę z Przystankiem
+OPTIONAL MATCH (ta:TicketArea)-[:CONTAINS]->(s)
+WHERE sa.stop_sequence >= gv.start_sequence 
+  AND sa.stop_sequence <= gv.end_sequence
+RETURN 
+    t.trip_headsign AS Kierunek,
+    [day IN ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] WHERE c[day] = true] AS DniKursowania,
+    s.name AS NazwaPrzystanku,
+    sa.arrival_time AS GodzinaPrzyjazdu,
+    ta.number AS Strefa
+ORDER BY sa.stop_sequence ASC

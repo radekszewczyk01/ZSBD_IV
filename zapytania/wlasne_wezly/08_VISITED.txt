@@ -1,0 +1,5 @@
+MATCH (g:Guest {guest_id: "jan_kowalski"})
+MATCH (j:Jadlodalnia {`@id`: 181717228})
+MERGE (g)-[r:VISITED]->(j)
+SET r.count = 1
+RETURN g.name, type(r), r.count, j.name

@@ -1,0 +1,9 @@
+MATCH (t:Ticket {ticket_id: "t_12345"})
+SET t.valid_from = datetime("2026-01-09T05:00:00"),
+    t.valid_until = datetime("2026-01-09T05:20:00"),
+    t.val
+RETURN 
+    t.ticket_id, 
+    t.valid_from, 
+    t.valid_from.dayOfWeek AS DzienTygodnia_Start,
+    t.valid_until

@@ -1,0 +1,13 @@
+// 1. Tworzymy (lub dopasowujemy) ogólny węzeł systemu reputacji
+MERGE (r:Renoma {name: "SystemReputacji"})
+
+// 2. Znajdujemy wszystkie jadłodajnie
+WITH r
+MATCH (j:Jadlodalnia)
+
+// 3. Tworzymy relację RATED z domyślnymi wartościami (jeśli jeszcze nie istnieje)
+MERGE (j)-[rel:RATED]->(r)
+ON CREATE SET 
+    rel.avg_score = 0.0,
+    rel.count = 0
+RETURN j.name, rel.avg_score, rel.count

@@ -1,0 +1,15 @@
+// 1. Znajdź strefę nr 1 (którą stworzyliśmy wcześniej)
+MATCH (zone:TicketArea {number: 1})
+
+// 2. Stwórz Pasażera (Guest)
+MERGE (g:Guest {guest_id: "jan_kowalski"})
+SET g.name = "Jan Kowalski"
+
+// 3. Stwórz Bilet (Ticket) i przypisz go do Strefy
+CREATE (t:Ticket {ticket_id: "t_12345", type: "20-minutowy"})
+CREATE (t)-[:VALID_FOR]->(zone)
+
+// 4. Pasażer kasuje bilet (tworzymy relację VALIDATED z datą skasowania)
+CREATE (g)-[:VALIDATED {validated_at: datetime()}]->(t)
+
+RETURN g, t, zone
