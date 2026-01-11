@@ -1,0 +1,3 @@
+CALL custom.findFastestRoute("41", "6342", "08:45:00", "monday")
+YIELD line, startStop, depTime, endStop, arrTime, stopsCount, isNextDay
+RETURN line, startStop, depTime, endStop, arrTime, stopsCount
