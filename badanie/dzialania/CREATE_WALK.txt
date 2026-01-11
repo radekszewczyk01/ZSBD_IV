@@ -1,0 +1,22 @@
+// 1. Znajdujemy wszystkie relacje DRIVE przecinające granice klastrów (Mosty)
+MATCH (a:Stop)-[r:DRIVE]->(b:Stop)
+WHERE a.communityId IS NOT NULL 
+  AND b.communityId IS NOT NULL 
+  AND a.communityId <> b.communityId
+
+// 2. Grupujemy połączenia. 
+// Zamiast tworzyć WALK dla każdego autobusu o 7:00, 7:15, 7:30...
+// Liczymy ŚREDNI czas przejazdu na tym odcinku.
+WITH a, b, avg(r.arr_time_sec - r.dep_time_sec) AS avg_bus_duration_sec
+
+// 3. Tworzymy (lub aktualizujemy) pojedynczą relację WALK
+MERGE (a)-[w:WALK]->(b)
+
+// 4. Ustawiamy czas przejścia wg Twojego wzoru: 5x czas jazdy
+// Używamy toInteger, żeby czas był liczbą całkowitą
+SET w.time_sec = toInteger(avg_bus_duration_sec * 5),
+    w.type = 'GENERATED_BRIDGE', // Oznaczenie dla Ciebie, że to automat
+    w.distance_info = 'Estimated based on bus speed'
+
+// 5. Zwracamy raport ile mostów "załatano"
+RETURN count(w) AS Liczba_Dodanych_Przejsc_Pieszych;

@@ -1,0 +1,7 @@
+MATCH (s1:Stop), (s2:Stop)
+WHERE s1.stop_name = s2.stop_name      // Ta sama nazwa (np. "Centrum")
+  AND s1.stop_code <> s2.stop_code     // Różne słupki (np. "01" vs "05")
+  AND id(s1) <> id(s2)                 // (Zabezpieczenie) to nie ten sam węzeł
+MERGE (s1)-[r:WALK]->(s2)              // Tworzymy relację
+SET r.time_sec = 60,                   // 1 minuta czasu
+    r.type = 'HUB_TRANSFER';           // Oznaczenie typu

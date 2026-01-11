@@ -1,0 +1,8 @@
+CALL gds.wcc.stream('transport-network')
+YIELD nodeId, componentId
+WITH componentId, count(*) AS Rozmiar_Podgrafu, collect(gds.util.asNode(nodeId).stop_name)[0..3] AS Przyklady
+RETURN 
+    componentId AS ID_Podgrafu, 
+    Rozmiar_Podgrafu, 
+    Przyklady
+ORDER BY Rozmiar_Podgrafu DESC;

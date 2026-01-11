@@ -1,0 +1,10 @@
+// 1. Oznaczamy małe, niepotrzebne komponenty (np. mniejsze niż 100 węzłów)
+CALL gds.wcc.stream('transport-network')
+YIELD nodeId, componentId
+WITH componentId, collect(nodeId) AS nodes
+WHERE size(nodes) < 2
+FOREACH (id in nodes | SET gds.util.asNode(id):DoUsuniecia);
+
+// 2. Usuwamy je fizycznie z bazy (Modyfikacja!)
+MATCH (n:DoUsuniecia)
+DETACH DELETE n;
