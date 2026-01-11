@@ -1,0 +1,5 @@
+CALL custom.getRandomLocation() 
+YIELD latitude, longitude
+RETURN latitude, longitudeCALL custom.findFastestRoute("41", "6342", "23:00:00", "monday")
+YIELD line, startStop, depTime, endStop, arrTime, stopsCount, isNextDay
+RETURN line, startStop, depTime, endStop, arrTime, stopsCount
