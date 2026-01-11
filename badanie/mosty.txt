@@ -1,0 +1,33 @@
+CALL gds.graph.drop('transport-network', false);
+
+CALL gds.graph.project(
+    'transport-network',
+    'Stop',
+    {
+        DRIVE: {
+            orientation: 'UNDIRECTED'
+        }
+    }
+);
+
+
+CALL gds.louvain.write('transport-network', {
+    writeProperty: 'communityId'
+})
+YIELD communityCount, modularity, modularities
+
+
+MATCH (a:Stop)-[r:DRIVE]-(b:Stop)
+WHERE a.communityId <> b.communityId // Start i Koniec są na różnych "serwerach"
+// Unikamy duplikatów A->B i B->A (żeby nie pokazywało mostu dwa razy)
+AND id(a) < id(b) 
+RETURN 
+    a.stop_name AS Przystanek_A, 
+    a.communityId AS Serwer_A,
+    '--- MOST ---' AS Typ,
+    b.stop_name AS Przystanek_B, 
+    b.communityId AS Serwer_B,
+    count(r) AS Liczba_Kursow_Przez_Most,   // Zliczamy ile autobusów tamtędy jedzie
+    collect(DISTINCT r.trip_id)[0..3] AS Przykladowe_Tripy // Pokazujemy 3 przykładowe ID
+ORDER BY Liczba_Kursow_Przez_Most DESC
+LIMIT 20;

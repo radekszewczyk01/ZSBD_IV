@@ -1,0 +1,16 @@
+CALL gds.graph.project(
+    'transport-network',
+    'Stop',
+    {
+        DRIVE: {
+            orientation: 'UNDIRECTED'
+        }
+    }
+);
+
+
+CALL gds.articulationPoints.stream('transport-network')
+YIELD nodeId
+WITH gds.util.asNode(nodeId) AS stop
+RETURN stop.stop_name AS Nazwa_Przystanku, stop.stop_id AS ID, stop.location AS Lokalizacja
+LIMIT 20;

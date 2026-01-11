@@ -1,0 +1,14 @@
+// Najpierw usuń starą projekcję, jeśli istnieje
+CALL gds.graph.drop('transport-network', false);
+
+// Stwórz nową, skierowaną (NATURAL) z wagami (liczba kursów)
+CALL gds.graph.project(
+    'transport-network',
+    'Stop',
+    {
+        DRIVE: {
+            orientation: 'NATURAL', // Kierunek ma znaczenie (A -> B)
+            aggregation: 'COUNT'    // Liczymy ile jest relacji DRIVE między parą węzłów
+        }
+    }
+);
