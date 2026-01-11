@@ -1,0 +1,3 @@
+CALL custom.znajdzNajlepszyDojazd(52.22341, 20.996509, 'mexican', '14:30:00', 'friday')
+YIELD Linia, PrzystanekStart, Odjazd, PrzystanekKoniec, Przyjazd
+RETURN *

@@ -1,0 +1,87 @@
+CALL apoc.custom.declareProcedure(
+    'znajdzNajlepszyDojazd(lat :: FLOAT, lon :: FLOAT, kuchnia :: STRING, godzina :: STRING, dzien :: STRING) :: (Linia :: STRING, PrzystanekStart :: STRING, Odjazd :: STRING, PrzystanekKoniec :: STRING, Przyjazd :: STRING)',
+    
+    '
+    WITH point({latitude: $lat, longitude: $lon}) AS userLoc
+    
+    // 1. Znajdź punkty startowe i restauracje
+    CALL {
+        WITH userLoc
+        MATCH (s:Stop)
+        RETURN s AS startStop
+        ORDER BY point.distance(s.location, userLoc) ASC
+        LIMIT 1
+    }
+
+    MATCH (j:Jadlodalnia)
+    WHERE j.cuisine = $kuchnia
+    WITH userLoc, startStop, j
+    ORDER BY point.distance(j.location, userLoc) ASC
+    LIMIT 3
+
+    CALL {
+        WITH j
+        MATCH (e:Stop)
+        RETURN e AS endStop
+        ORDER BY point.distance(e.location, j.location) ASC
+        LIMIT 1
+    }
+
+    // 2. Wywołanie Javy
+    CALL custom.findFastestRoute(toString(startStop.stop_id), toString(endStop.stop_id), $godzina, $dzien)
+    YIELD line, startStop as ss, depTime, endStop as es, arrTime
+
+    // 3. Zbieramy trasę
+    WITH j, endStop, 
+         collect({
+            Linia: line, 
+            PrzystanekStart: ss, 
+            Odjazd: depTime, 
+            PrzystanekKoniec: es, 
+            Przyjazd: arrTime
+         }) AS segmentyTrasy
+    WHERE size(segmentyTrasy) > 0
+
+    // 4. Obliczamy ostatni spacer
+    WITH j, segmentyTrasy,
+         point.distance(endStop.location, j.location) AS dystansMetry,
+         segmentyTrasy[-1] AS ostatniEtapBus
+
+    // POPRAWKA: Przekazujemy dystansMetry dalej!
+    WITH j, segmentyTrasy, ostatniEtapBus, dystansMetry,
+         toInteger(dystansMetry / 1.666) AS czasSpaceruSek
+
+    // POPRAWKA: Przekazujemy dystansMetry dalej!
+    WITH j, segmentyTrasy, ostatniEtapBus, dystansMetry, czasSpaceruSek,
+         toString(time(ostatniEtapBus.Przyjazd) + duration({seconds: czasSpaceruSek})) AS czasDojsciaFormat
+
+    // Tworzymy obiekt dla ostatniego etapu
+    WITH j, segmentyTrasy, 
+         {
+            Linia: "Spacer do celu (" + toInteger(dystansMetry) + "m)",
+            PrzystanekStart: ostatniEtapBus.PrzystanekKoniec,
+            Odjazd: ostatniEtapBus.Przyjazd,
+            PrzystanekKoniec: j.name,
+            Przyjazd: substring(czasDojsciaFormat, 0, 8)
+         } AS etapKoncowy
+
+    // Łączymy listę
+    WITH segmentyTrasy + etapKoncowy AS calaTrasa
+
+    // 5. Wybór najlepszej trasy
+    ORDER BY calaTrasa[-1].Przyjazd ASC
+    LIMIT 1
+
+    // 6. Rozwijamy listę
+    UNWIND calaTrasa AS etap
+    
+    RETURN 
+        etap.Linia AS Linia,
+        etap.PrzystanekStart AS PrzystanekStart,
+        etap.Odjazd AS Odjazd,
+        etap.PrzystanekKoniec AS PrzystanekKoniec,
+        etap.Przyjazd AS Przyjazd
+    ',
+    'read',
+    'Zwraca listę kroków dojazdu łącznie ze spacerem do lokalu'
+);
