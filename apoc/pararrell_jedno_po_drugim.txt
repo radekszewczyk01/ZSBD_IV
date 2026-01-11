@@ -1,0 +1,21 @@
+WITH [
+    {lat: 52.2297, lon: 21.0122, imie: "Marek (Centrum)"}, 
+    {lat: 52.1625, lon: 21.0436, imie: "Ania (Kabaty)"},
+    {lat: 52.2700, lon: 20.9800, imie: "Tomek (Bielany)"},
+    {lat: 52.2400, lon: 21.0900, imie: "Kasia (Praga)"},
+    {lat: 52.2000, lon: 20.9500, imie: "Jacek (Ochota)"}
+] AS listaZnajomych
+
+UNWIND listaZnajomych AS x
+
+// To wykonuje się "jeden po drugim"
+CALL custom.znajdzNajlepszyDojazd(x.lat, x.lon, "mexican", "18:00:00", "friday")
+YIELD Linia, PrzystanekStart, Odjazd, PrzystanekKoniec, Przyjazd
+
+RETURN 
+    x.imie AS Kto,
+    Linia, 
+    PrzystanekStart, 
+    Odjazd, 
+    PrzystanekKoniec, 
+    Przyjazd
