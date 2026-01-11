@@ -1,0 +1,18 @@
+// 1. Pobieramy punkt odniesienia (użytkownika)
+CALL custom.getRandomLocation() 
+YIELD latitude, longitude
+
+// 2. Tworzymy punkt Neo4j dla użytkownika
+WITH point({latitude: latitude, longitude: longitude}) AS userPoint
+
+// 3. Szukamy restauracji i obliczamy dystans
+MATCH (j:Jadlodalnia)
+WHERE j.cuisine = 'polish'
+
+// 4. Obliczamy odległość, sortujemy i bierzemy 3 pierwsze
+WITH j, point.distance(j.location, userPoint) AS dystans
+ORDER BY dystans ASC
+LIMIT 3
+
+// 5. Zwracamy węzeł (i opcjonalnie dystans dla informacji)
+RETURN j, dystans

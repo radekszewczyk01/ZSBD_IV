@@ -1,0 +1,19 @@
+// 1. Pobieramy losowy punkt "centralny"
+CALL custom.getRandomLocation() 
+YIELD latitude AS centerLat, longitude AS centerLon
+
+// 2. Wyznaczamy wielkość kwadratu poszukiwań (delta ok. 1km w każdą stronę)
+WITH centerLat, centerLon, 0.05 AS delta
+
+// 3. Obliczamy rogi kwadratu (lewy-dół i prawy-góra)
+WITH 
+  point({latitude: centerLat - delta, longitude: centerLon - delta}) AS lowerLeft,
+  point({latitude: centerLat + delta, longitude: centerLon + delta}) AS upperRight
+
+// 4. Szukamy jadłodajni wewnątrz tego kwadratu, wykorzystując indeks
+MATCH (j:Jadlodalnia)
+WHERE j.cuisine = 'polish'
+  AND point.withinBBox(j.location, lowerLeft, upperRight)
+
+// 5. Zwracamy wyniki
+RETURN j.name AS Nazwa, j.location AS Lokalizacja

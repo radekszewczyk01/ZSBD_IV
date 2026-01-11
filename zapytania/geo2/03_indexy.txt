@@ -1,0 +1,2 @@
+CREATE POINT INDEX index_jadlodalnia_location FOR (j:Jadlodalnia) ON (j.location);
+CREATE POINT INDEX index_stop_location FOR (s:Stop) ON (s.location);

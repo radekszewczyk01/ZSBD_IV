@@ -1,0 +1,53 @@
+// 1. Obejście cache NeoDash i losowanie lokalizacji
+WITH rand() AS ignoreMe
+CALL custom.getRandomLocation() 
+YIELD latitude, longitude
+WITH point({latitude: latitude, longitude: longitude}) AS userLoc
+
+// 2. Znajdź najbliższy przystanek STARTOWY dla użytkownika
+CALL {
+    WITH userLoc
+    MATCH (s:Stop)
+    // Szukamy najbliższego przystanku względem userLoc
+    RETURN s AS startStop
+    ORDER BY point.distance(s.location, userLoc) ASC
+    LIMIT 1
+}
+
+// 3. Znajdź 3 najbliższe restauracje
+MATCH (j:Jadlodalnia)
+WHERE j.cuisine = 'polish'
+WITH userLoc, startStop, j
+ORDER BY point.distance(j.location, userLoc) ASC
+LIMIT 3
+
+// 4. Dla każdej z tych 3 restauracji znajdź najbliższy przystanek DOCELOWY
+CALL {
+    WITH j
+    MATCH (e:Stop)
+    RETURN e AS endStop
+    ORDER BY point.distance(e.location, j.location) ASC
+    LIMIT 1
+}
+
+// 5. Wywołaj procedurę trasy dla pary: startStop -> endStop
+// Zakładam, że stop_id w bazie to integer, więc rzutuję na String (toString), bo procedura bierze stringi
+CALL custom.findFastestRoute(toString(startStop.stop_id), toString(endStop.stop_id), "23:00:00", "monday")
+YIELD line, depTime, arrTime, stopsCount, isNextDay
+
+// 6. Oblicz czas trwania podróży, aby móc posortować (zakładamy, że trasa jest tego samego dnia lub następnego)
+WITH j, line, startStop, endStop, depTime, arrTime, stopsCount,
+     duration.between(time(depTime), time(arrTime)) AS czasTrwania
+
+// 7. Sortuj od najkrótszego czasu i weź tylko najlepszy wynik
+ORDER BY czasTrwania ASC
+LIMIT 1
+
+RETURN 
+    j.name AS Restauracja, 
+    startStop.stop_name AS PrzystanekStart, 
+    endStop.stop_name AS PrzystanekKoniec, 
+    line AS Linia, 
+    depTime AS Odjazd, 
+    arrTime AS Przyjazd,
+    czasTrwania
